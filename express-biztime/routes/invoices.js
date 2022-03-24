@@ -2,6 +2,8 @@ const express = require('express')
 const ExpressError = require('../expressError')
 const router = new express.Router()
 const db = require('../db')
+const dateTime = require('node-datetime');
+const dt = dateTime.create()
 
 
 router.get('/', async function (req, res, next) {
@@ -40,13 +42,23 @@ router.post('/', async function (req, res, next){
 
 router.put('/:id', async function (req, res, next){
     const updatedIV = req.body
-    
+    // console.log(new Date(dt.now()))
     try{
-        const results = await db.query(`UPDATE invoices SET amt=$1 WHERE id=$2 RETURNING id, comp_code, amt, paid, add_date, paid_date`, [updatedIV.amt, req.params.id ])
+        if(updatedIV.paid === "t") {
+            const results = await db.query(`UPDATE invoices SET amt=$1, paid=$2, paid_date=$3 WHERE id=$4 RETURNING id, comp_code, amt, paid, add_date, paid_date`, [updatedIV.amt, updatedIV.paid, new Date(dt.now()),  req.params.id ])
         if (results.rows.length === 0){
-            throw new ExpressError('Company Code NOT Found', 404)
+            throw new ExpressError('Invoice NOT Found', 404)
         }
         return res.json({invoice: results.rows[0]})
+        }
+        else {
+            const results = await db.query(`UPDATE invoices SET amt=$1, paid=$2, paid_date=$3 WHERE id=$4 RETURNING id, comp_code, amt, paid, add_date, paid_date`, [updatedIV.amt, updatedIV.paid, null,  req.params.id ])
+        if (results.rows.length === 0){
+            throw new ExpressError('Invoice NOT Found', 404)
+        }
+        return res.json({invoice: results.rows[0]})
+        }
+        
     } catch (e) {
        return next(e)
     }
